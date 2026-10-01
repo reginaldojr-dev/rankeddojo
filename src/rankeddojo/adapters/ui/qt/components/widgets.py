@@ -80,7 +80,7 @@ def section_label(text: str) -> QLabel:
     return label(text, role="section")
 
 
-def logo_mark(glyph: str = ">", size: int = 34) -> QLabel:
+def logo_mark(glyph: str = "RD", size: int = 34) -> QLabel:
     """Small geometric RankedDojo brand mark.
 
     A generic, token-driven component: its look (fill, border, corner
@@ -90,8 +90,9 @@ def logo_mark(glyph: str = ">", size: int = 34) -> QLabel:
     in the stylesheet, and no per-theme image asset. Swapping the theme
     restyles it exactly like every other widget.
 
-    `glyph` stays a plain geometric character (terminal/rank inspired, e.g.
-    ">" or a chevron) -- never a samurai/katana/torii image.
+    `glyph` stays a plain geometric mark (the default ``RD`` or a chevron)
+    inspired by the product name/rank language -- never a samurai/katana/torii
+    image.
     """
     widget = QLabel(glyph)
     widget.setProperty("role", "logo")

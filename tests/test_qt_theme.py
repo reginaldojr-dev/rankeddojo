@@ -125,6 +125,13 @@ class ThemeTokensTest(unittest.TestCase):
             self.assertIn(f"color: {theme.background};", logo_rule)
             self.assertIn(theme.font_title, logo_rule)
 
+    def test_logo_mark_has_rankeddojo_identity_without_theme_logic(self) -> None:
+        logo = ui.logo_mark()
+        self.assertEqual(logo.text(), "RD")
+        self.assertEqual(logo.property("role"), "logo")
+        self.assertEqual(logo.size().width(), 34)
+        self.assertEqual(logo.size().height(), 34)
+
     def test_qss_source_has_no_conditional_theme_identity_branching(self) -> None:
         # Guard against the exact anti-pattern this phase forbids: no
         # `if`/branch inside build_stylesheet may key off a theme's identity
