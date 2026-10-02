@@ -81,15 +81,24 @@ make
 ```
 
 Esse target instala o checkout atual com `python -m pip install -e .` e inicia
-`rankeddojo`. Para instalar a versão publicada, use separadamente:
+`rankeddojo`. No Ubuntu 22.04 amd64, ele também prepara localmente
+`libxcb-cursor.so.0` quando a biblioteca não existe no sistema, sem usar `sudo`.
+Para instalar a versão publicada, use separadamente:
 `python -m pip install rankeddojo`.
 
 O pacote instala as dependências Python e os recursos públicos necessários, incluindo
 os packs de exemplo. Algumas distribuições Linux ainda podem exigir bibliotecas
 nativas do Qt para o backend gráfico. Se o Qt informar `Could not load the Qt
-platform plugin "xcb"`, verifique a documentação da sua distribuição para
-dependências como `xcb-cursor0`/`libxcb-cursor0`; isso não é instalado
-automaticamente pelo RankedDojo.
+platform plugin "xcb"`, o `make` tenta preparar a biblioteca oficial Ubuntu
+Jammy no cache `.vendor/` quando estiver em Ubuntu 22.04 amd64. Em outras
+distribuições ou arquiteturas, consulte a documentação do sistema para as
+dependências nativas correspondentes; nenhum gestor de pacotes é executado pelo
+RankedDojo.
+
+O fallback local usa somente o pacote oficial Ubuntu Jammy `libxcb-cursor0`
+amd64 `0.1.1-4ubuntu1`, baixado de `archive.ubuntu.com` e validado por SHA-256
+antes da extração. O pacote upstream é MIT/X Consortium; somente
+`libxcb-cursor.so.0` é extraída para `.vendor/linux/lib`, que é ignorada pelo Git.
 
 ## Desenvolvimento
 

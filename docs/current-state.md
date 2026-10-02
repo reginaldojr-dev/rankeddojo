@@ -90,6 +90,7 @@
 - Versão V1: `1.0.0`.
 - Instalação Linux oficial: `python -m pip install rankeddojo` seguida de `rankeddojo`.
 - Desenvolvimento instalado: `python -m pip install -e .` seguido de `rankeddojo`.
+- Desenvolvimento local via `make`: instala o checkout, prepara `libxcb-cursor.so.0` localmente no Ubuntu 22.04 amd64 quando necessário e inicia o app.
 - Dependências de runtime vêm de `pyproject.toml`; PyInstaller permanece somente no extra `build` para o fluxo Windows.
 - Build helper Windows: `build.py`.
 - Spec: `RankedDojo.spec`.

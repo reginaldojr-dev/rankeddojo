@@ -2,4 +2,4 @@
 
 all:
 	python -m pip install -e .
-	rankeddojo
+	python scripts/prepare_linux.py --run

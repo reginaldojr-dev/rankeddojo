@@ -41,6 +41,7 @@ desktop.ini
 
 # Local project artifacts (agent outputs, private packs, scratch workspaces)
 _local/
+.vendor/
 build/
 dist/
 
