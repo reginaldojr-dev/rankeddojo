@@ -23,7 +23,7 @@ from rankeddojo.application.engine.expectations import ExpectationRegistry, defa
 from rankeddojo.application.engine.generators import TestCaseGeneratorRegistry, default_generator_registry
 from rankeddojo.application.engine.runtime_registry import RuntimeRegistry, UnsupportedLanguageError
 from rankeddojo.application.engine.test_case_service import TestCaseService
-from rankeddojo.domain.exercise_definition import ExerciseDefinition
+from rankeddojo.domain.exercise_definition import ExerciseDefinition, PYTHON_PROJECT
 from rankeddojo.ports.runtime_port import LanguageRuntime, PreparedProgram
 
 
@@ -106,6 +106,10 @@ class ActivityContentPreflight:
             return runtime_result
 
         try:
+            if definition.execution.type == PYTHON_PROJECT:
+                if not definition.validation_plan or not definition.validation_plan.project_checks:
+                    return ActivityPreflightResult.content_invalid("python_project requires declarative project checks.")
+                return ActivityPreflightResult.ready()
             runtime = self._runtimes.get(definition.language)
             strategy = self._strategies.get(definition.execution.type)
             if strategy is None:

@@ -7,7 +7,7 @@ from typing import Any
 from rankeddojo.adapters.contract_fields import read_schema_version, read_topics
 from rankeddojo.application.capabilities import default_exercise_capabilities
 from rankeddojo.domain.identifiers import UnsafeValueError, parse_relative_path, validate_identifier
-from rankeddojo.domain.pack_definition import DEFAULT_LANGUAGE, PackDefinition, PackLevelDefinition
+from rankeddojo.domain.pack_definition import DEFAULT_LANGUAGE, PackDefinition, PackLevelDefinition, WORKSPACE_SCOPES
 
 MAX_EXAM_DURATION_MINUTES = 24 * 60
 V2_PACK_KEYS = frozenset(
@@ -25,6 +25,7 @@ V2_PACK_KEYS = frozenset(
         "description",
         "exam",
         "levels",
+        "workspace",
     )
 )
 
@@ -81,6 +82,7 @@ class JsonPackLoader:
         version = self._require_non_empty_string(data, "version")
         levels = self._read_levels(data)
         exam_duration_seconds = self._read_exam_duration(data)
+        workspace_scope = self._read_workspace_scope(data.get("workspace", {}))
         return PackDefinition(
             id=pack_id,
             name=name,
@@ -92,7 +94,19 @@ class JsonPackLoader:
             content_language=content_language,
             topics=topics,
             learning_track=learning_track,
+            workspace_scope=workspace_scope,
         )
+
+    @staticmethod
+    def _read_workspace_scope(raw: Any) -> str:
+        if raw in (None, {}):
+            return "exercise"
+        if not isinstance(raw, dict) or set(raw) - {"scope"}:
+            raise PackDefinitionError("workspace must contain only the scope field.")
+        scope = raw.get("scope", "exercise")
+        if not isinstance(scope, str) or scope not in WORKSPACE_SCOPES:
+            raise PackDefinitionError("workspace.scope must be 'exercise' or 'pack'.")
+        return scope
 
     def _read_optional_pack_language(self, data: dict[str, Any]) -> str:
         if "language" not in data:

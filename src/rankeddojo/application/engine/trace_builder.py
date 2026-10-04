@@ -65,6 +65,20 @@ class TraceBuilder:
     def add_content_error(self, message: str) -> None:
         self._lines.extend(("=== Content Error ===", message, ""))
 
+    def add_project_check(self, index: int, check) -> None:
+        self._lines.extend(
+            (
+                f"=== Project Check {index} ===",
+                f"Check: {check.check_type}",
+                f"Expected: {check.expected}",
+                f"Received: {check.received}",
+                f"Result: {'PASS' if check.passed else 'FAIL'}",
+                "Details:",
+                check.details,
+                "",
+            )
+        )
+
     def add_missing_compiler(self, message: str) -> None:
         self._lines.extend(("=== Compiler Error ===", message, ""))
 

@@ -69,6 +69,11 @@ class ValidationPlan:
     def primary(self) -> ValidationStep:
         return self.steps[0]
 
+    @property
+    def project_checks(self) -> tuple[Mapping[str, object], ...]:
+        checks = self.primary.config.get("checks", ())
+        return tuple(checks) if isinstance(checks, (tuple, list)) else ()
+
 
 @dataclass(frozen=True)
 class ActivityDefinition:

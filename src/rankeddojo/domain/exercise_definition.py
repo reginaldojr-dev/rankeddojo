@@ -21,7 +21,8 @@ from rankeddojo.domain.test_contract import TestContract
 # Neutral execution types: what the runtime must do with the submission.
 PROGRAM_OUTPUT = "program_output"
 FUNCTION_CALL = "function_call"
-EXECUTION_KINDS = (PROGRAM_OUTPUT, FUNCTION_CALL)
+PYTHON_PROJECT = "python_project"
+EXECUTION_KINDS = (PROGRAM_OUTPUT, FUNCTION_CALL, PYTHON_PROJECT)
 
 # Contract v1 aliases to neutral types. They remain accepted for compatibility.
 LEGACY_EXECUTION_ALIASES = {
@@ -32,7 +33,7 @@ LEGACY_EXECUTION_ALIASES = {
 
 @dataclass(frozen=True)
 class SubmissionDefinition:
-    filename: str
+    filename: str | PurePath
     extra_files: tuple[PurePath, ...] = ()
 
 

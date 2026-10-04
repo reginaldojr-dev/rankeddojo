@@ -601,15 +601,12 @@ class MVPTrainerCoordinator:
         state: ExamState | None = None,
         overwrite: bool = False,
     ) -> ActiveExercise:
-        workspace_root = (
-            state.workspace_path.parent if state is not None else self._workspace.root_for(
-                self._workspace_root, self._exam_scope(None)
-            )
-        )
-        prepared = self._workspace.prepare(
+        session_id = state.id if state is not None else None
+        prepared = self._workspace.prepare_scoped(
             definition=ref.definition,
             exercise_content_path=ref.content_path,
-            workspace_root=workspace_root,
+            workspace_root=self._workspace_root,
+            scope=self._exam_scope(session_id, ref.pack),
             overwrite=overwrite,
         )
         return ActiveExercise(
@@ -671,7 +668,7 @@ class MVPTrainerCoordinator:
             score=0,
             remaining_seconds=duration,
             seed=random.SystemRandom().randint(1, 2**31),
-            workspace_path=self._workspace.root_for(self._workspace_root, self._exam_scope(session_id)) / first.definition.id,
+            workspace_path=self._workspace.root_for(self._workspace_root, self._exam_scope(session_id, pack)) / ("project" if pack.workspace_scope == "pack" else first.definition.id),
             deadline_at=now + timedelta(seconds=duration),
             duration_seconds=duration,
         )
@@ -772,7 +769,7 @@ class MVPTrainerCoordinator:
             score=score,
             remaining_seconds=self._remaining(state),
             seed=random.SystemRandom().randint(1, 2**31),
-            workspace_path=self._workspace.root_for(self._workspace_root, self._exam_scope(state.id)) / next_ref.definition.id,
+            workspace_path=self._workspace.root_for(self._workspace_root, self._exam_scope(state.id, self._pack(state.pack_id))) / ("project" if self._pack(state.pack_id).workspace_scope == "pack" else next_ref.definition.id),
         )
         self._save_exam_state(next_state, "active")
         return outcome, next_state
@@ -959,11 +956,16 @@ class MVPTrainerCoordinator:
 
     def _training_scope(self, pack_id: str, policy: SessionPolicy | None = None) -> WorkspaceScope:
         policy = policy or self._policy(TRAINING_POLICY_ID)
-        return WorkspaceScope(kind=policy.workspace_scope_kind, pack_id=pack_id)
+        pack = self._pack(pack_id)
+        return WorkspaceScope(kind=policy.workspace_scope_kind, pack_id=pack_id, shared=pack.workspace_scope == "pack")
 
-    def _exam_scope(self, session_id: str | None) -> WorkspaceScope:
+    def _exam_scope(self, session_id: str | None, pack: PackDefinition | None = None) -> WorkspaceScope:
         policy = self._policy(EXAM_POLICY_ID)
-        return WorkspaceScope(kind=policy.workspace_scope_kind, session_id=session_id or "_draft")
+        return WorkspaceScope(
+            kind=policy.workspace_scope_kind,
+            session_id=session_id or "_draft",
+            shared=pack is not None and pack.workspace_scope == "pack",
+        )
 
 
 def _parse_datetime(value: object) -> datetime | None:
