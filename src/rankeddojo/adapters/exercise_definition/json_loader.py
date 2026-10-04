@@ -33,7 +33,9 @@ from rankeddojo.domain.exercise_definition import (
     SubmissionDefinition,
     TestCaseDefinition,
     TestDefinition,
+    PYTHON_PROJECT,
 )
+from rankeddojo.domain.project_checks import PROJECT_CHECK_TYPES
 from rankeddojo.domain.test_contract import ArgumentContract, ArgumentKind, TestContract
 from rankeddojo.adapters.contract_fields import read_schema_version, read_topics
 from rankeddojo.domain.pack_definition import DEFAULT_LANGUAGE
@@ -77,7 +79,7 @@ V3_EXERCISE_KEYS = frozenset(
         "validation",
     )
 )
-V3_VALIDATION_KEYS = frozenset(("strategy", "harness", "entry", "args_format", "reference", "tests", "limits", "support_files"))
+V3_VALIDATION_KEYS = frozenset(("strategy", "harness", "entry", "args_format", "reference", "tests", "limits", "support_files", "checks"))
 
 
 
@@ -143,7 +145,8 @@ class JsonExerciseDefinitionLoader:
         exercise_id = self._require_identifier(data, "id")
         name = self._require_non_empty_string(data, "name")
         subject = self._require_relative_path(data, "subject")
-        submission = self._read_submission(self._require_object_field(data, "submission"))
+        project_strategy = schema_version >= 3 and isinstance(data.get("validation"), dict) and data["validation"].get("strategy") == PYTHON_PROJECT
+        submission = self._read_submission(self._require_object_field(data, "submission"), allow_paths=project_strategy)
         usage = self._read_usage(data.get("usage", {})) if schema_version >= 3 else UsageConstraints()
         validation_plan: ValidationPlan | None = None
         if schema_version >= 3:
@@ -200,9 +203,12 @@ class JsonExerciseDefinitionLoader:
             prerequisites=prerequisites,
         )
 
-    def _read_submission(self, data: dict[str, Any]) -> SubmissionDefinition:
+    def _read_submission(self, data: dict[str, Any], *, allow_paths: bool = False) -> SubmissionDefinition:
         filename = self._require_non_empty_string(data, "filename")
-        self._validate_filename(filename)
+        if allow_paths:
+            self._read_relative_path_value(filename, "submission.filename")
+        else:
+            self._validate_filename(filename)
         extra_files = data.get("extra_files", data.get("files", []))
         if extra_files:
             if not isinstance(extra_files, list):
@@ -222,6 +228,15 @@ class JsonExerciseDefinitionLoader:
         if unknown:
             raise ExerciseDefinitionError(f"Unknown field(s) in validation: {', '.join(unknown)}.")
         strategy = self._require_identifier(data, "strategy")
+        if strategy == PYTHON_PROJECT:
+            if language != "python":
+                raise ExerciseDefinitionError("python_project is supported only for python activities.")
+            checks = self._read_project_checks(data.get("checks"))
+            limits = self._read_limits(data.get("limits", {}))
+            plan = ValidationPlan(
+                steps=(ValidationStep(id="project", validator="project", strategy=PYTHON_PROJECT, config={"checks": checks}),)
+            )
+            return ExecutionDefinition(type=PYTHON_PROJECT, declared_type=strategy), None, TestDefinition("fixed_cases", "literal"), limits, (), plan
         execution_data: dict[str, Any] = {"type": strategy}
         for key in ("harness", "entry", "args_format"):
             if key in data:
@@ -247,6 +262,19 @@ class JsonExerciseDefinitionLoader:
             )
         )
         return execution, reference, tests, limits, support_files, plan
+
+    def _read_project_checks(self, raw: Any) -> tuple[dict[str, object], ...]:
+        if not isinstance(raw, list) or not raw:
+            raise ExerciseDefinitionError("validation.checks must be a non-empty list for python_project.")
+        checks: list[dict[str, object]] = []
+        for index, item in enumerate(raw):
+            if not isinstance(item, dict):
+                raise ExerciseDefinitionError(f"validation.checks[{index}] must be an object.")
+            kind = item.get("type")
+            if not isinstance(kind, str) or kind not in PROJECT_CHECK_TYPES:
+                raise ExerciseDefinitionError(f"Unknown project check: {kind!r}.")
+            checks.append({key: value for key, value in item.items()})
+        return tuple(checks)
 
     def _read_execution(
         self, data: dict[str, Any], language: str

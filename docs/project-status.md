@@ -261,3 +261,11 @@ src/exam_trainer/
   3. A UI guarda estado em memória por contexto (`training/<pack>` ou `exam/<session>`) e só redireciona a IDE se o usuário já abriu a IDE naquele contexto.
   4. Trocar exercise preserva pastas anteriores; prova continua limpando session root apenas no encerramento definitivo.
 - **Pendências:** outros editores além de VS Code continuam com comportamento genérico; contracts ainda não substituem validação semântica/cobertura profunda dos exercícios.
+## Progressive project packs
+
+The post-V1 core now supports an opt-in `workspace.scope: pack` for shared
+training projects and the declarative `python_project` strategy. The core owns
+the available checks and runs them against isolated copies; packs cannot ship
+grader scripts or arbitrary commands. The development pack
+`_local/packs/call-me-maybe-guided` demonstrates the progressive contract and
+remains local-only.

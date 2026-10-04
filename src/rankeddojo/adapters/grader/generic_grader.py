@@ -24,6 +24,8 @@ from rankeddojo.application.engine.trace_builder import TraceBuilder
 from rankeddojo.domain.grading import GradingOutcome, GradingResult, TestCase, TestResult
 from rankeddojo.ports.grader_port import GradingRequest
 from rankeddojo.ports.runtime_port import LanguageRuntime, PreparedProgram
+from rankeddojo.adapters.grader.python_project_checks import run_project_checks
+from rankeddojo.domain.exercise_definition import PYTHON_PROJECT
 
 
 class ReferenceExecutionError(Exception):
@@ -56,6 +58,9 @@ class GenericGrader:
         definition = request.definition
         trace = TraceBuilder()
         trace.add_environment(definition, request.workspace_path)
+
+        if definition.execution.type == PYTHON_PROJECT:
+            return self._grade_python_project(request, trace, seed)
 
         source_file = request.workspace_path / definition.submission.filename
         trace.add_collected_file(source_file)
@@ -140,6 +145,39 @@ class GenericGrader:
         )
         trace.add_final_result(grading_result)
         return replace(grading_result, trace_data=trace.build())
+
+    def _grade_python_project(self, request: GradingRequest, trace: TraceBuilder, seed: int) -> GradingResult:
+        definition = request.definition
+        source_file = request.workspace_path / definition.submission.filename
+        trace.add_collected_file(source_file)
+        if not source_file.is_file():
+            return self._content_error(trace, seed, f"Expected project entry file not found: {source_file}")
+        try:
+            checks = run_project_checks(
+                request.workspace_path,
+                definition.validation_plan.project_checks if definition.validation_plan else (),
+            )
+        except Exception as error:  # malformed declarations are content errors
+            return self._content_error(trace, seed, str(error))
+        results = tuple(
+            TestResult(
+                test_case=TestCase(args=(check.check_type,), expected=check.expected),
+                passed=check.passed,
+                stdout=check.received,
+                stderr=check.details if not check.passed else "",
+            )
+            for check in checks
+        )
+        for index, check in enumerate(checks, 1):
+            trace.add_project_check(index, check)
+        result = GradingResult(
+            outcome=GradingOutcome.PASSED if checks and all(check.passed for check in checks) else GradingOutcome.USER_FAILED,
+            test_results=results,
+            seed=seed,
+            trace_data=trace.build(),
+        )
+        trace.add_final_result(result)
+        return replace(result, trace_data=trace.build())
 
     @staticmethod
     def _run_test_case(

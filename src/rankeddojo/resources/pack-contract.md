@@ -40,6 +40,26 @@ my-pack/
 
 ## pack.json
 
+### Progressive project workspaces
+
+Schema v3 packs may opt into a shared project workspace:
+
+```json
+"workspace": {"scope": "pack"}
+```
+
+The default is `{"scope": "exercise"}`. Exercise scope preserves the
+traditional isolated layout. Pack scope uses one `training/<pack_id>/project`
+directory (and one isolated exam-session project when used by an exam). Files
+already present are never overwritten silently; a starter is copied only when
+the target does not exist.
+
+Python multi-file projects may declare `validation.strategy = "python_project"`
+and a list of trusted declarative `validation.checks`. Supported checks are
+`file_exists`, `module_imports`, `callable_exists`, `class_exists`,
+`call_function`, and `raises`. The pack supplies data only. It cannot provide a
+grader script, plugin, arbitrary shell command, `eval`, or `exec` payload.
+
 ```json
 {
   "schema_version": 3,

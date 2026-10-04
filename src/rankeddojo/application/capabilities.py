@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Iterable
 
-from rankeddojo.domain.exercise_definition import FUNCTION_CALL, PROGRAM_OUTPUT
+from rankeddojo.domain.exercise_definition import FUNCTION_CALL, PROGRAM_OUTPUT, PYTHON_PROJECT
 from rankeddojo.ports.runtime_port import RuntimeDescriptor
 
 
@@ -108,7 +108,7 @@ C_LANGUAGE = LanguageSupport(
 
 PYTHON_LANGUAGE = LanguageSupport(
     language="python",
-    executions=frozenset((PROGRAM_OUTPUT, FUNCTION_CALL)),
+    executions=frozenset((PROGRAM_OUTPUT, FUNCTION_CALL, PYTHON_PROJECT)),
     function_harness=HARNESS_FROM_APP,
     args_formats=frozenset(("json", "str")),
 )
@@ -137,7 +137,7 @@ def default_exercise_capabilities() -> ExerciseCapabilities:
     return ExerciseCapabilities(
         executions=ExecutionRegistry.from_values(
             # neutral types + v1 contract aliases
-            (PROGRAM_OUTPUT, FUNCTION_CALL, "function_with_main", "reference_compare")
+            (PROGRAM_OUTPUT, FUNCTION_CALL, PYTHON_PROJECT, "function_with_main", "reference_compare")
         ),
         generators=GeneratorRegistry.from_values(
             (

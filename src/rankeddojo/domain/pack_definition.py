@@ -6,6 +6,7 @@ from pathlib import PurePath
 LEGACY_EXAM_DURATION_SECONDS = 4 * 60 * 60
 DEFAULT_LANGUAGE = "c"
 SUPPORTED_SCHEMA_VERSIONS = (1, 2, 3)
+WORKSPACE_SCOPES = ("exercise", "pack")
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class PackDefinition:
     # keeps existing training/exam behavior unchanged and is simply invisible
     # to the learning track model -- see `adapters/learning/pack_content_provider.py`.
     learning_track: bool = False
+    workspace_scope: str = "exercise"
 
     @property
     def exam_duration_seconds_or_default(self) -> int:

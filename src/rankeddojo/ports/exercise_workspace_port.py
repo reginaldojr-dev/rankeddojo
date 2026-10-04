@@ -21,6 +21,7 @@ class WorkspaceScope:
     pack_id: str | None = None
     session_id: str | None = None
     owner_id: str | None = None
+    shared: bool = False
 
 
 class ExerciseWorkspacePort(Protocol):

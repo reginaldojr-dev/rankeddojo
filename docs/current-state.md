@@ -53,6 +53,8 @@
 - Runtimes suportados no contrato/app: C, C++, Python e Java.
 - Packs públicos versionados: `c-basics`, `cpp-basics`, `python-basics`, `java-basics`, `sample_rank`.
 - Packs locais privados/estudo em `_local/packs/` continuam ignorados, incluindo `rank02-practice` e `rank02-original` a `rank06-original`.
+- Packs v3 podem declarar `workspace.scope: pack` para um projeto compartilhado; o padrão legado continua `exercise`.
+- A strategy `python_project` usa somente checks confiáveis declarativos do core (`file_exists`, `module_imports`, `callable_exists`, `class_exists`, `call_function`, `raises`).
 
 ## Persistence
 
@@ -70,6 +72,7 @@
 - Existe migração defensiva de workspace legado de treino quando seguro.
 - Nenhum workspace antigo deve ser apagado silenciosamente.
 - `projects/<pack>/<project>` é reservado no adapter como scope futuro, sem feature funcional.
+- Um workspace progressivo usa `training/<pack_id>/project` e preserva arquivos existentes; subjects ficam em `.rankeddojo/subjects/`.
 
 ## UI
 
