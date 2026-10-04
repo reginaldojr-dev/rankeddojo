@@ -91,6 +91,7 @@
 - Instalação Linux oficial: `python -m pip install rankeddojo` seguida de `rankeddojo`.
 - Desenvolvimento instalado: `python -m pip install -e .` seguido de `rankeddojo`.
 - Desenvolvimento local via `make`: instala o checkout, prepara `libxcb-cursor.so.0` localmente no Ubuntu 22.04 amd64 quando necessário e inicia o app.
+- `rankeddojo` e `python -m rankeddojo.main` também executam o bootstrap Linux antes de importar PySide6; checkouts usam `.vendor/linux` e instalações pip usam `${XDG_CACHE_HOME:-~/.cache}/rankeddojo/linux`.
 - Dependências de runtime vêm de `pyproject.toml`; PyInstaller permanece somente no extra `build` para o fluxo Windows.
 - Build helper Windows: `build.py`.
 - Spec: `RankedDojo.spec`.
