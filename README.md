@@ -99,6 +99,11 @@ O fallback local usa somente o pacote oficial Ubuntu Jammy `libxcb-cursor0`
 amd64 `0.1.1-4ubuntu1`, baixado de `archive.ubuntu.com` e validado por SHA-256
 antes da extração. O pacote upstream é MIT/X Consortium; somente
 `libxcb-cursor.so.0` é extraída para `.vendor/linux/lib`, que é ignorada pelo Git.
+O launcher `rankeddojo` e `python -m rankeddojo.main` executam esse mesmo
+bootstrap antes de importar PySide6. Em uma instalação comum via pip, sem um
+checkout disponível, o cache fica em `${XDG_CACHE_HOME:-~/.cache}/rankeddojo/linux`.
+Depois da preparação inicial, ambos os comandos podem ser executados de qualquer
+diretório; nenhum `make` adicional é necessário.
 
 ## Desenvolvimento
 
