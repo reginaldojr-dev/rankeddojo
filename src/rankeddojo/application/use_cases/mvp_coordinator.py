@@ -136,6 +136,8 @@ class MVPTrainerCoordinator:
         self._session_policies = session_policies or SessionPolicyRegistry()
         self._history = HistoryService(progress_repository)
         self._activity_preflight = ActivityContentPreflight(runtimes)
+        self._exam_preflight_cache: dict[str | None, PreflightResult] = {}
+        self._exam_levels_cache: dict[str, list[tuple[str, list[ExerciseRef]]]] = {}
         self._expired_exam: ExamState | None = None
         # Fase 9/10: learning tracks. `content_registry` is optional -- an
         # empty `ContentRegistry()` (no providers registered) behaves like
@@ -174,7 +176,9 @@ class MVPTrainerCoordinator:
         return self._pack_catalog.pack_origin(pack_id)
 
     def remove_managed_pack(self, pack_id: str) -> PackDefinition:
-        return self._pack_catalog.remove_managed_pack(pack_id)
+        removed = self._pack_catalog.remove_managed_pack(pack_id)
+        self._invalidate_exam_caches()
+        return removed
 
     def list_levels(self, pack_id: str) -> tuple[str, ...]:
         packs = {pack.id: pack for pack in self.list_packs()}
@@ -271,6 +275,7 @@ class MVPTrainerCoordinator:
         if self._config_repository is not None:
             self._config_repository.save_workspace_path(workspace.path)
         self._workspace_root = workspace.path
+        self._invalidate_exam_caches()
 
     def theme_key(self) -> str | None:
         return None if self._config_repository is None else self._config_repository.load_theme()
@@ -331,6 +336,7 @@ class MVPTrainerCoordinator:
         return self.runtime_status(language).tool
 
     def redetect_runtime(self, language: str) -> str | None:
+        self._invalidate_exam_caches()
         return self.runtime(language).redetect()
 
     def pack_language(self, pack_id: str | None) -> str:
@@ -381,6 +387,7 @@ class MVPTrainerCoordinator:
 
     def save_manual_runtime(self, language: str, path: Path) -> str:
         """Validate with a probe and save the selected tool for the language."""
+        self._invalidate_exam_caches()
         configured = self.runtime(language).configure_manual(path)
         if self._config_repository is not None:
             self._config_repository.save_runtime_path(language, str(path))
@@ -449,7 +456,9 @@ class MVPTrainerCoordinator:
         return self._pack_importer.inspect_pack(source_path)
 
     def import_pack(self, source_path: Path) -> PackDefinition:
-        return self._pack_importer.import_pack(source_path)
+        imported = self._pack_importer.import_pack(source_path)
+        self._invalidate_exam_caches()
+        return imported
 
     def compiler_ready(self) -> bool:
         language = self._runtimes.primary_language()
@@ -470,6 +479,9 @@ class MVPTrainerCoordinator:
         training = self.preflight_training()
         if not training.ok:
             return training
+        cached = self._exam_preflight_cache.get(pack_id)
+        if cached is not None:
+            return cached
         languages = self.pack_languages(pack_id)
         if not languages:
             return PreflightResult.failed("packs", "Pack selecionado sem exercícios disponíveis.")
@@ -477,11 +489,27 @@ class MVPTrainerCoordinator:
         if not runtimes.ok:
             return runtimes
         if pack_id is None:
-            return PreflightResult.passed()
-        return self._preflight_exam_content(pack_id)
+            result = PreflightResult.passed()
+        else:
+            result = self._preflight_exam_content(pack_id)
+        if result.ok:
+            self._exam_preflight_cache[pack_id] = result
+        return result
+
+    def exam_preflight_ready(self, pack_id: str | None) -> bool:
+        """Return whether a successful exam preflight is still reusable."""
+        result = self._exam_preflight_cache.get(pack_id)
+        if result is None or not result.ok or not self.preflight_training().ok:
+            return False
+        return pack_id is None or any(pack.id == pack_id for pack in self.list_packs())
+
+    def _invalidate_exam_caches(self) -> None:
+        self._exam_preflight_cache.clear()
+        self._exam_levels_cache.clear()
 
     def preflight_runtime(self, language: str) -> PreflightResult:
         """Is the pack language runtime ready? May run the probe."""
+        self._invalidate_exam_caches()
         return self._preflight_languages((language,))
 
     def preflight_exercise(self, ref: ExerciseRef) -> PreflightResult:
@@ -814,12 +842,16 @@ class MVPTrainerCoordinator:
 
     def _exam_levels(self, pack: PackDefinition) -> list[tuple[str, list[ExerciseRef]]]:
         """Levels in pack.json declaration order, never alphabetical, without empty levels."""
+        cached = self._exam_levels_cache.get(pack.id)
+        if cached is not None:
+            return cached
         refs = self._pack_catalog.list_exercises(pack.id)
         grouped: list[tuple[str, list[ExerciseRef]]] = []
         for level_id in pack.level_ids:
             level_refs = [ref for ref in refs if ref.level_id == level_id]
             if level_refs:
                 grouped.append((level_id, level_refs))
+        self._exam_levels_cache[pack.id] = grouped
         return grouped
 
     def finish_exam(self, state: ExamState, status: str, final_score: float | None = None) -> None:

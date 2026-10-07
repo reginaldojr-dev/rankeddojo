@@ -1913,6 +1913,8 @@ class MainWindow(QMainWindow):
         if getattr(self, "_exam_preflight_ready_pack", None) == pack_id:
             self._exam_preflight_ready_pack = None
             return True
+        if self._coordinator.exam_preflight_ready(pack_id):
+            return True
         if self._coordinator.pack_runtimes_ready(pack_id):
             preflight = self._coordinator.preflight_exam(pack_id)
             return self._handle_preflight(preflight, then)

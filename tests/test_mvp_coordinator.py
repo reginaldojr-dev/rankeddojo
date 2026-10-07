@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest import mock
 
 from rankeddojo.adapters.compiler.system_c_compiler import SystemCCompiler
 from rankeddojo.adapters.editor.subprocess_editor import SubprocessEditor, SubprocessEditorFactory
@@ -18,6 +19,7 @@ from rankeddojo.adapters.workspace.local_workspace import LocalWorkspace
 from rankeddojo.application.engine.runtime_registry import RuntimeRegistry
 from rankeddojo.application.use_cases.mvp_coordinator import (
     MVPTrainerCoordinator,
+    PreflightResult,
     TrainingOptions,
 )
 from rankeddojo.domain.grading import GradingOutcome, GradingResult, TraceData
@@ -115,6 +117,36 @@ class MVPTrainerCoordinatorTest(unittest.TestCase):
             second = coordinator.choose_training_exercise(options)
 
             self.assertNotEqual(first.definition.id, second.definition.id)
+
+    def test_successful_exam_preflight_is_reused_until_invalidated(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            coordinator = self._coordinator(temp_dir)
+            coordinator._workspace_root.mkdir()
+            with mock.patch.object(coordinator, "preflight_training", return_value=PreflightResult.passed()), \
+                 mock.patch.object(coordinator, "pack_languages", return_value=("c",)), \
+                 mock.patch.object(coordinator, "_preflight_languages", return_value=PreflightResult.passed()), \
+                 mock.patch.object(coordinator, "_preflight_exam_content", return_value=PreflightResult.passed()):
+                passed = coordinator.preflight_exam("sample_rank")
+            self.assertTrue(passed.ok)
+
+            with mock.patch.object(coordinator, "_preflight_exam_content", wraps=coordinator._preflight_exam_content) as content:
+                self.assertTrue(coordinator.preflight_exam("sample_rank").ok)
+                content.assert_not_called()
+                self.assertTrue(coordinator.exam_preflight_ready("sample_rank"))
+
+            coordinator._invalidate_exam_caches()
+            self.assertFalse(coordinator.exam_preflight_ready("sample_rank"))
+
+    def test_exam_preflight_cache_is_invalidated_by_runtime_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            coordinator = self._coordinator(temp_dir)
+            coordinator._workspace_root.mkdir()
+            coordinator._exam_preflight_cache["sample_rank"] = PreflightResult.passed()
+            self.assertTrue(coordinator.exam_preflight_ready("sample_rank"))
+
+            with mock.patch.object(coordinator._runtimes.get("c"), "redetect", return_value=None):
+                coordinator.redetect_runtime("c")
+            self.assertFalse(coordinator.exam_preflight_ready("sample_rank"))
 
     def test_exam_fail_keeps_same_exercise(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
