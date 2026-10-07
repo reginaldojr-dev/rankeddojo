@@ -1289,13 +1289,16 @@ class MainWindow(QMainWindow):
         # packs
         self._packs_summary = ui.label("", wrap=True)
         self._pack_capabilities_summary = ui.label("", wrap=True)
+        self._managed_pack_combo = QComboBox()
+        self._managed_pack_combo.setPlaceholderText(self._t("Nenhum pack gerenciado"))
         sections.addWidget(
             self._settings_card(
                 "PACKS",
-                [self._packs_summary, self._pack_capabilities_summary],
+                [self._packs_summary, self._pack_capabilities_summary, self._managed_pack_combo],
                 [
                     ("[ IMPORTAR PACK ]", self._import_pack),
                     ("[ ATUALIZAR PACKS ]", self._refresh_packs),
+                    ("[ REMOVER PACK ]", self._remove_managed_pack),
                     ("[ ABRIR DOCUMENTAÇÃO DE PACKS ]", self._show_pack_help),
                 ],
             )
@@ -1370,6 +1373,7 @@ class MainWindow(QMainWindow):
             "DETECTAR NOVAMENTE": "Detectar novamente",
             "IMPORTAR PACK": "Importar Pack",
             "ATUALIZAR PACKS": "Atualizar Packs",
+            "REMOVER PACK": "Remover pack",
             "ABRIR DOCUMENTAÇÃO DE PACKS": "Abrir documentação de Packs",
         }
         upper = normalized.upper()
@@ -1939,8 +1943,24 @@ class MainWindow(QMainWindow):
             or f"○ {self._t('nenhum pack instalado')}"
         )
         self._pack_capabilities_summary.setText(self._pack_capabilities_text())
+        managed_packs = self._coordinator.list_managed_packs()
+        current_managed = self._managed_pack_combo.currentData()
+        self._managed_pack_combo.blockSignals(True)
+        self._managed_pack_combo.clear()
+        for pack in managed_packs:
+            self._managed_pack_combo.addItem(f"{pack.name} ({pack.id})", pack.id)
+        if current_managed is not None:
+            index = self._managed_pack_combo.findData(current_managed)
+            if index >= 0:
+                self._managed_pack_combo.setCurrentIndex(index)
+        self._managed_pack_combo.setPlaceholderText(self._t("Nenhum pack gerenciado"))
+        self._managed_pack_combo.blockSignals(False)
+        for button in self._settings_page.findChildren(QPushButton):
+            if button.property("sourceText") == "[ REMOVER PACK ]":
+                button.setEnabled(bool(managed_packs))
         self._refresh_levels()
         self._refresh_study_languages()
+        self._refresh_home_status()
 
     def _pack_capabilities_text(self) -> str:
         capabilities = self._coordinator.exercise_capabilities()
@@ -3127,6 +3147,43 @@ class MainWindow(QMainWindow):
         return labels.get(status.lower(), status or "-")
 
     # ---------------------------------------------------------------- settings
+    def _remove_managed_pack(self) -> None:
+        pack_id = self._managed_pack_combo.currentData()
+        if not isinstance(pack_id, str) or not pack_id:
+            return
+        pack = next((item for item in self._coordinator.list_managed_packs() if item.id == pack_id), None)
+        if pack is None:
+            self._refresh_packs()
+            return
+
+        answer = QMessageBox.question(
+            self,
+            self._t("Remover pack"),
+            self._t(
+                'Remover o pack "{pack}"?\n\nEste pack importado será removido do RankedDojo.\nSeu histórico e progresso serão preservados.',
+                pack=pack.name,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            self._coordinator.remove_managed_pack(pack_id)
+        except Exception as error:  # noqa: BLE001 - UI converts service failures to feedback
+            QMessageBox.warning(
+                self,
+                self._t("Remover pack"),
+                f"{self._t('Não foi possível remover o pack.')}\n\n{error}",
+            )
+            return
+        self._refresh_packs()
+        QMessageBox.information(
+            self,
+            self._t("Remover pack"),
+            self._t("Pack removido. Histórico e progresso foram preservados."),
+        )
+
     def _import_pack(self) -> None:
         if self._tasks.is_busy("import"):
             return
