@@ -252,8 +252,16 @@ class MainWindow(QMainWindow):
         for label, text in self._study_field_labels:
             label.setText(self._t(text))
         self._reset_combo_items(self._study_progression_combo, ("Progressive", "Uniform"), ("progressive", "uniform"))
-        self._reset_combo_items(self._study_levels_combo, ("Automatic", "1", "2", "3", "4", "5", "6"))
-        self._reset_combo_items(self._study_exercises_per_level_combo, ("Automatic", "2", "3", "4", "5"))
+        self._reset_combo_items(
+            self._study_levels_combo,
+            ("Automatic", "1", "2", "3", "4", "5", "6"),
+            ("automatic", "1", "2", "3", "4", "5", "6"),
+        )
+        self._reset_combo_items(
+            self._study_exercises_per_level_combo,
+            ("Automatic", "2", "3", "4", "5"),
+            ("automatic", "2", "3", "4", "5"),
+        )
         self._reset_combo_items(self._study_goal_combo, ("Aprender", "Praticar", "Revisar", "Validar conhecimento"))
         self._reset_combo_items(self._study_format_combo, ("Exercícios", "Projeto", "Misto", "Revisão", "Simulado"))
         self._reset_combo_items(self._study_content_language_combo, ("Português (pt-BR)", "Inglês (en)"), ("pt-BR", "en"))
@@ -657,9 +665,15 @@ class MainWindow(QMainWindow):
         fields = QGridLayout()
         fields.setHorizontalSpacing(10)
         fields.setVerticalSpacing(8)
-        self._study_progression_combo = self._combo(("Progressive", "Uniform"))
-        self._study_levels_combo = self._combo(("Automatic", "1", "2", "3", "4", "5", "6"))
-        self._study_exercises_per_level_combo = self._combo(("Automatic", "2", "3", "4", "5"))
+        self._study_progression_combo = self._combo(("Progressive", "Uniform"), ("progressive", "uniform"))
+        self._study_levels_combo = self._combo(
+            ("Automatic", "1", "2", "3", "4", "5", "6"),
+            ("automatic", "1", "2", "3", "4", "5", "6"),
+        )
+        self._study_exercises_per_level_combo = self._combo(
+            ("Automatic", "2", "3", "4", "5"),
+            ("automatic", "2", "3", "4", "5"),
+        )
         self._study_goal_combo = self._combo(("Aprender", "Praticar", "Revisar", "Validar conhecimento"))
         self._study_format_combo = self._combo(("Exercícios", "Projeto", "Misto", "Revisão", "Simulado"))
         self._study_language_combo = QComboBox()
@@ -715,10 +729,12 @@ class MainWindow(QMainWindow):
         return page
 
     @staticmethod
-    def _combo(items: tuple[str, ...]) -> QComboBox:
+    def _combo(items: tuple[str, ...], values: tuple[str, ...] | None = None) -> QComboBox:
+        if values is not None and len(values) != len(items):
+            raise ValueError("Combo labels and values must have the same length.")
         combo = QComboBox()
-        for item in items:
-            combo.addItem(item, item)
+        for index, item in enumerate(items):
+            combo.addItem(item, values[index] if values is not None else item)
         return combo
 
     # --------------------------------------------------------------- training

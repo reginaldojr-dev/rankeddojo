@@ -327,6 +327,12 @@ class MainWindowTest(unittest.TestCase):
             self.assertEqual(window._study_progression_combo.currentData(), "progressive")
             self.assertEqual(window._study_levels_combo.currentData(), "automatic")
             self.assertEqual(window._study_exercises_per_level_combo.currentData(), "automatic")
+            window._locale.set_locale("en")
+            self.assertEqual(window._study_levels_combo.currentText(), "Automatic")
+            self.assertEqual(window._study_levels_combo.currentData(), "automatic")
+            window._locale.set_locale("es")
+            self.assertEqual(window._study_levels_combo.currentData(), "automatic")
+            self.assertEqual(window._study_progression_combo.currentData(), "progressive")
 
     def test_home_shows_pack_empty_state_only_without_managed_content(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -229,8 +229,11 @@ class JsonExerciseDefinitionLoader:
             raise ExerciseDefinitionError(f"Unknown field(s) in validation: {', '.join(unknown)}.")
         strategy = self._require_identifier(data, "strategy")
         if strategy == PYTHON_PROJECT:
-            if language != "python":
-                raise ExerciseDefinitionError("python_project is supported only for python activities.")
+            support = self._capabilities.language(language)
+            if support is None or not support.executions.supports(PYTHON_PROJECT):
+                raise ExerciseDefinitionError(
+                    f"Execution strategy {strategy} is not supported for language {language}."
+                )
             checks = self._read_project_checks(data.get("checks"))
             limits = self._read_limits(data.get("limits", {}))
             plan = ValidationPlan(
