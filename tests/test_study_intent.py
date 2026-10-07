@@ -36,7 +36,8 @@ class PackPromptBuilderTest(unittest.TestCase):
         )
 
         self.assertIn("listas e dicionarios", prompt)
-        self.assertIn("Linguagem de programacao: python", prompt)
+        self.assertIn("PROGRAMMING LANGUAGE\nPython", prompt)
+        self.assertIn("Linguagem de programacao: Python", prompt)
         self.assertIn("Idioma dos subjects/conteudo: pt-BR", prompt)
         self.assertIn("schema_version: 3", prompt)
         self.assertIn("program_output", prompt)
@@ -70,7 +71,26 @@ class PackPromptBuilderTest(unittest.TestCase):
         )
 
         self.assertIn("fundamentos de programação", prompt)
+        self.assertIn("PROGRAMMING LANGUAGE\nAutomatic", prompt)
         self.assertIn("Nenhum runtime registrado", prompt)
+
+    def test_custom_programming_language_is_preserved_in_prompt(self) -> None:
+        prompt = PackPromptBuilder(
+            capabilities=default_exercise_capabilities(),
+            runtime_statuses=(),
+            pack_contract="contrato",
+        ).build(
+            StudyIntent(
+                topic="programação de sistemas",
+                goal="Praticar",
+                format="Exercícios",
+                programming_language="Rust",
+                content_language="pt-BR",
+                size="Médio",
+            )
+        )
+
+        self.assertIn("PROGRAMMING LANGUAGE\nRust", prompt)
 
 
 if __name__ == "__main__":

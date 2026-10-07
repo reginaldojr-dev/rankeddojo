@@ -335,6 +335,31 @@ class MainWindowTest(unittest.TestCase):
             self.assertEqual(window._study_levels_combo.currentData(), "automatic")
             self.assertEqual(window._study_progression_combo.currentData(), "progressive")
 
+    def test_study_generator_language_selector_uses_content_language_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window = self._window(temp_dir)
+            window._open_study_flow()
+            window._locale.set_locale("en")
+
+            self.assertEqual(
+                [window._study_language_combo.itemData(index) for index in range(window._study_language_combo.count())],
+                ["automatic", "c", "cpp", "java", "python", "custom"],
+            )
+            labels = [window._study_language_combo.itemText(index) for index in range(window._study_language_combo.count())]
+            self.assertEqual(labels, ["Automatic", "C", "C++", "Java", "Python", "Custom"])
+            self.assertFalse(any("Compilador" in label or "runtime not checked" in label for label in labels))
+
+            with mock.patch.object(window._coordinator, "runtime_statuses", return_value=()):
+                window._refresh_study_languages()
+            self.assertEqual(window._study_language_combo.count(), 6)
+
+            window._study_language_combo.setCurrentIndex(window._study_language_combo.findData("custom"))
+            self.assertTrue(window._study_custom_language.isEnabled())
+            window._study_custom_language.setText("Rust")
+            self.assertEqual(window._study_intent().programming_language, "Rust")
+            window._generate_study_prompt()
+            self.assertIn("PROGRAMMING LANGUAGE\nRust", window._study_prompt_output.toPlainText())
+
     def test_home_shows_pack_empty_state_only_without_managed_content(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             window = self._window(temp_dir)
@@ -384,7 +409,8 @@ class MainWindowTest(unittest.TestCase):
             prompt = window._study_prompt_output.toPlainText()
 
             self.assertIn("ponteiros e strings", prompt)
-            self.assertIn("Linguagem de programacao: c", prompt)
+            self.assertIn("PROGRAMMING LANGUAGE\nC", prompt)
+            self.assertIn("Linguagem de programacao: C", prompt)
             self.assertIn("Idioma dos subjects/conteudo: pt-BR", prompt)
             self.assertIn("Contrato atual do pack", prompt)
             self.assertIn("program_output", prompt)

@@ -19,6 +19,16 @@ class StudyIntent:
     exercises_per_level: str = "automatic"
 
 
+_PROGRAMMING_LANGUAGE_LABELS = {
+    "automatic": "Automatic",
+    "c": "C",
+    "cpp": "C++",
+    "java": "Java",
+    "python": "Python",
+    "custom": "Custom",
+}
+
+
 class PackPromptBuilder:
     """Turns a study intent into a vendor-neutral pack generation prompt."""
 
@@ -52,6 +62,10 @@ class PackPromptBuilder:
         reference_required = ", ".join(sorted(self._capabilities.expectations.reference_required)) or "nenhuma"
 
         profile = self._context_registry.detect(intent)
+        programming_language = _PROGRAMMING_LANGUAGE_LABELS.get(
+            intent.programming_language,
+            intent.programming_language,
+        )
         progression = intent.progression or "progressive"
         levels = intent.levels or "automatic"
         exercises_per_level = intent.exercises_per_level or "automatic"
@@ -77,7 +91,7 @@ class PackPromptBuilder:
             f"{topic}",
             "",
             "PROGRAMMING LANGUAGE",
-            f"{intent.programming_language}",
+            programming_language,
             "",
             "CONTENT LANGUAGE",
             f"{intent.content_language}",
@@ -115,7 +129,7 @@ class PackPromptBuilder:
             "Validation must rely on declarative test cases, fixtures, expectations and supported RankedDojo strategies.",
             "",
             "USER OPTIONS (legacy-readable labels)",
-            f"- Linguagem de programacao: {intent.programming_language}",
+            f"- Linguagem de programacao: {programming_language}",
             f"- Idioma dos subjects/conteudo: {intent.content_language}",
             f"- Objetivo: {intent.goal}",
             f"- Formato: {intent.format}",

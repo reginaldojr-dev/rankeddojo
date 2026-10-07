@@ -249,6 +249,7 @@ class MainWindow(QMainWindow):
         self._set_title_label(self._study_title, self._t("Quero estudar algo novo título"))
         self._study_description.setText(self._t("Descreva o que quer estudar, gere um prompt compatível e importe o pack resultante."))
         self._study_topic.setPlaceholderText(self._t("Ex.: ponteiros e strings, OOP em Python, arrays em Java..."))
+        self._study_custom_language.setPlaceholderText(self._t("Ex.: Rust, Go, Kotlin..."))
         self._study_section_label.setText(f"> {self._t('O que você quer estudar?').upper()}")
         for label, text in self._study_field_labels:
             label.setText(self._t(text))
@@ -708,6 +709,17 @@ class MainWindow(QMainWindow):
         self._study_goal_combo = self._combo(("Aprender", "Praticar", "Revisar", "Validar conhecimento"))
         self._study_format_combo = self._combo(("Exercícios", "Projeto", "Misto", "Revisão", "Simulado"))
         self._study_language_combo = QComboBox()
+        self._study_custom_language = QLineEdit()
+        self._study_custom_language.setPlaceholderText("Ex.: Rust, Go, Kotlin...")
+        self._study_custom_language.setVisible(False)
+        self._study_custom_language.setEnabled(False)
+        self._study_language_combo.currentIndexChanged.connect(self._update_custom_language_field)
+        language_field = QWidget()
+        language_layout = QVBoxLayout(language_field)
+        language_layout.setContentsMargins(0, 0, 0, 0)
+        language_layout.setSpacing(6)
+        language_layout.addWidget(self._study_language_combo)
+        language_layout.addWidget(self._study_custom_language)
         self._study_content_language_combo = self._combo(("Português (pt-BR)", "Inglês (en)"))
         self._study_content_language_combo.setItemData(0, "pt-BR")
         self._study_content_language_combo.setItemData(1, "en")
@@ -720,7 +732,7 @@ class MainWindow(QMainWindow):
                 ("Exercícios por level", self._study_exercises_per_level_combo),
                 ("Objetivo", self._study_goal_combo),
                 ("Formato", self._study_format_combo),
-                ("Linguagem", self._study_language_combo),
+                ("Linguagem", language_field),
                 ("Idioma", self._study_content_language_combo),
                 ("Tamanho", self._study_size_combo),
             )
@@ -1514,24 +1526,37 @@ class MainWindow(QMainWindow):
         current = self._study_language_combo.currentData()
         self._study_language_combo.blockSignals(True)
         self._study_language_combo.clear()
-        self._study_language_combo.addItem(self._t("Automático"), "automatic")
-        for status in self._coordinator.runtime_statuses():
-            label = f"{status.display_name} ({status.language})"
-            if not status.available and not status.tool:
-                label += f" · {self._t('runtime não verificado')}"
-            self._study_language_combo.addItem(label, status.language)
+        options = (
+            ("Automático", "automatic"),
+            ("C", "c"),
+            ("C++", "cpp"),
+            ("Java", "java"),
+            ("Python", "python"),
+            ("Custom", "custom"),
+        )
+        for label, value in options:
+            self._study_language_combo.addItem(self._t(label), value)
         if current is not None:
             index = self._study_language_combo.findData(current)
             if index >= 0:
                 self._study_language_combo.setCurrentIndex(index)
         self._study_language_combo.blockSignals(False)
+        self._update_custom_language_field()
+
+    def _update_custom_language_field(self, _index: int = -1) -> None:
+        custom = self._study_language_combo.currentData() == "custom"
+        self._study_custom_language.setEnabled(custom)
+        self._study_custom_language.setVisible(custom)
 
     def _study_intent(self) -> StudyIntent:
+        language = str(self._study_language_combo.currentData() or "automatic")
+        if language == "custom":
+            language = self._study_custom_language.text().strip() or "custom"
         return StudyIntent(
             topic=self._study_topic.toPlainText(),
             goal=str(self._study_goal_combo.currentData() or self._study_goal_combo.currentText()),
             format=str(self._study_format_combo.currentData() or self._study_format_combo.currentText()),
-            programming_language=str(self._study_language_combo.currentData() or "automatic"),
+            programming_language=language,
             content_language=str(self._study_content_language_combo.currentData() or "pt-BR"),
             size=str(self._study_size_combo.currentData() or self._study_size_combo.currentText()),
             progression=str(self._study_progression_combo.currentData() or "progressive"),
