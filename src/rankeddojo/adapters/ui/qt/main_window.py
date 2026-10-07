@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
+    QSpinBox,
     QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
@@ -256,13 +257,13 @@ class MainWindow(QMainWindow):
         self._reset_combo_items(self._study_progression_combo, ("Progressive", "Uniform"), ("progressive", "uniform"))
         self._reset_combo_items(
             self._study_levels_combo,
-            ("Automatic", "1", "2", "3", "4", "5", "6"),
-            ("automatic", "1", "2", "3", "4", "5", "6"),
+            ("Automatic", "Custom"),
+            ("automatic", "custom"),
         )
         self._reset_combo_items(
             self._study_exercises_per_level_combo,
-            ("Automatic", "2", "3", "4", "5"),
-            ("automatic", "2", "3", "4", "5"),
+            ("Automatic", "Custom"),
+            ("automatic", "custom"),
         )
         self._reset_combo_items(self._study_goal_combo, ("Aprender", "Praticar", "Revisar", "Validar conhecimento"))
         self._reset_combo_items(self._study_format_combo, ("Exercícios", "Projeto", "Misto", "Revisão", "Simulado"))
@@ -272,6 +273,7 @@ class MainWindow(QMainWindow):
         self._set_button(self._copy_prompt_button, self._action("Copiar prompt"))
         self._set_button(self._study_import_button, self._action("Importar Pack"))
         self._study_prompt_output.setPlaceholderText(self._t("O prompt gerado aparecerá aqui."))
+        self._update_study_quantity_fields()
         if not self._study_prompt_output.toPlainText().strip():
             self._study_status.setText(self._t("1. gere o prompt · 2. copie · 3. cole na IA que preferir · 4. importe o pack"))
 
@@ -698,14 +700,14 @@ class MainWindow(QMainWindow):
         fields.setHorizontalSpacing(10)
         fields.setVerticalSpacing(8)
         self._study_progression_combo = self._combo(("Progressive", "Uniform"), ("progressive", "uniform"))
-        self._study_levels_combo = self._combo(
-            ("Automatic", "1", "2", "3", "4", "5", "6"),
-            ("automatic", "1", "2", "3", "4", "5", "6"),
-        )
-        self._study_exercises_per_level_combo = self._combo(
-            ("Automatic", "2", "3", "4", "5"),
-            ("automatic", "2", "3", "4", "5"),
-        )
+        self._study_levels_combo = self._combo(("Automatic", "Custom"), ("automatic", "custom"))
+        self._study_levels_custom = self._quantity_input(1, 99)
+        self._study_exercises_per_level_combo = self._combo(("Automatic", "Custom"), ("automatic", "custom"))
+        self._study_exercises_custom = self._quantity_input(1, 100)
+        self._study_levels_combo.currentIndexChanged.connect(self._update_study_quantity_fields)
+        self._study_exercises_per_level_combo.currentIndexChanged.connect(self._update_study_quantity_fields)
+        levels_field = self._quantity_field(self._study_levels_combo, self._study_levels_custom)
+        exercises_field = self._quantity_field(self._study_exercises_per_level_combo, self._study_exercises_custom)
         self._study_goal_combo = self._combo(("Aprender", "Praticar", "Revisar", "Validar conhecimento"))
         self._study_format_combo = self._combo(("Exercícios", "Projeto", "Misto", "Revisão", "Simulado"))
         self._study_language_combo = QComboBox()
@@ -728,8 +730,8 @@ class MainWindow(QMainWindow):
         for index, (caption, widget) in enumerate(
             (
                 ("Progressão", self._study_progression_combo),
-                ("Levels", self._study_levels_combo),
-                ("Exercícios por level", self._study_exercises_per_level_combo),
+                ("Levels", levels_field),
+                ("Exercícios por level", exercises_field),
                 ("Objetivo", self._study_goal_combo),
                 ("Formato", self._study_format_combo),
                 ("Linguagem", language_field),
@@ -779,6 +781,24 @@ class MainWindow(QMainWindow):
         for index, item in enumerate(items):
             combo.addItem(item, values[index] if values is not None else item)
         return combo
+
+    @staticmethod
+    def _quantity_input(minimum: int, maximum: int) -> QSpinBox:
+        field = QSpinBox()
+        field.setRange(minimum, maximum)
+        field.setValue(minimum)
+        field.setKeyboardTracking(False)
+        return field
+
+    @staticmethod
+    def _quantity_field(combo: QComboBox, input_field: QSpinBox) -> QWidget:
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(combo)
+        layout.addWidget(input_field)
+        return container
 
     # --------------------------------------------------------------- training
     def _build_training_page(self) -> QWidget:
@@ -1548,10 +1568,24 @@ class MainWindow(QMainWindow):
         self._study_custom_language.setEnabled(custom)
         self._study_custom_language.setVisible(custom)
 
+    def _update_study_quantity_fields(self, _index: int = -1) -> None:
+        levels_custom = self._study_levels_combo.currentData() == "custom"
+        exercises_custom = self._study_exercises_per_level_combo.currentData() == "custom"
+        self._study_levels_custom.setEnabled(levels_custom)
+        self._study_levels_custom.setVisible(levels_custom)
+        self._study_exercises_custom.setEnabled(exercises_custom)
+        self._study_exercises_custom.setVisible(exercises_custom)
+
     def _study_intent(self) -> StudyIntent:
         language = str(self._study_language_combo.currentData() or "automatic")
         if language == "custom":
             language = self._study_custom_language.text().strip() or "custom"
+        levels = str(self._study_levels_combo.currentData() or "automatic")
+        if levels == "custom":
+            levels = str(self._study_levels_custom.value())
+        exercises_per_level = str(self._study_exercises_per_level_combo.currentData() or "automatic")
+        if exercises_per_level == "custom":
+            exercises_per_level = str(self._study_exercises_custom.value())
         return StudyIntent(
             topic=self._study_topic.toPlainText(),
             goal=str(self._study_goal_combo.currentData() or self._study_goal_combo.currentText()),
@@ -1560,8 +1594,8 @@ class MainWindow(QMainWindow):
             content_language=str(self._study_content_language_combo.currentData() or "pt-BR"),
             size=str(self._study_size_combo.currentData() or self._study_size_combo.currentText()),
             progression=str(self._study_progression_combo.currentData() or "progressive"),
-            levels=str(self._study_levels_combo.currentData() or "automatic"),
-            exercises_per_level=str(self._study_exercises_per_level_combo.currentData() or "automatic"),
+            levels=levels,
+            exercises_per_level=exercises_per_level,
         )
 
     def _generate_study_prompt(self) -> None:

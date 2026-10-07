@@ -326,6 +326,27 @@ class MainWindowTest(unittest.TestCase):
             window._open_study_flow()
 
             self.assertEqual(window._study_progression_combo.currentData(), "progressive")
+            self.assertEqual(
+                [window._study_levels_combo.itemData(index) for index in range(window._study_levels_combo.count())],
+                ["automatic", "custom"],
+            )
+            self.assertEqual(
+                [window._study_exercises_per_level_combo.itemData(index) for index in range(window._study_exercises_per_level_combo.count())],
+                ["automatic", "custom"],
+            )
+            self.assertFalse(window._study_levels_custom.isEnabled())
+            self.assertFalse(window._study_exercises_custom.isEnabled())
+            window._study_levels_combo.setCurrentIndex(window._study_levels_combo.findData("custom"))
+            window._study_exercises_per_level_combo.setCurrentIndex(window._study_exercises_per_level_combo.findData("custom"))
+            self.assertTrue(window._study_levels_custom.isEnabled())
+            self.assertTrue(window._study_exercises_custom.isEnabled())
+            window._study_levels_custom.setValue(4)
+            window._study_exercises_custom.setValue(3)
+            intent = window._study_intent()
+            self.assertEqual(intent.levels, "4")
+            self.assertEqual(intent.exercises_per_level, "3")
+            window._study_levels_combo.setCurrentIndex(window._study_levels_combo.findData("automatic"))
+            window._study_exercises_per_level_combo.setCurrentIndex(window._study_exercises_per_level_combo.findData("automatic"))
             self.assertEqual(window._study_levels_combo.currentData(), "automatic")
             self.assertEqual(window._study_exercises_per_level_combo.currentData(), "automatic")
             window._locale.set_locale("en")
