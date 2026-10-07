@@ -230,7 +230,7 @@ class JsonExerciseDefinitionLoader:
         strategy = self._require_identifier(data, "strategy")
         if strategy == PYTHON_PROJECT:
             support = self._capabilities.language(language)
-            if support is None or not support.executions.supports(PYTHON_PROJECT):
+            if support is None or PYTHON_PROJECT not in support.executions:
                 raise ExerciseDefinitionError(
                     f"Execution strategy {strategy} is not supported for language {language}."
                 )
