@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import shutil
 import tempfile
 import threading
 import unittest
@@ -428,6 +429,42 @@ class MainWindowTest(unittest.TestCase):
             self.assertIn("Validators/expectations:", summary)
             window._show_pack_help()
             self.assertIs(window._stack.currentWidget(), window._pack_help_page)
+
+    def test_pack_removal_control_is_disabled_without_managed_packs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window = self._window(temp_dir)
+
+            remove_button = self._runtime_action_button(window, "[ REMOVER PACK ]")
+
+            self.assertEqual(window._managed_pack_combo.count(), 0)
+            self.assertFalse(remove_button.isEnabled())
+
+    def test_canceling_managed_pack_removal_preserves_pack(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            managed = Path(temp_dir) / "managed"
+            shutil.copytree(Path(__file__).parent.parent / "examples" / "packs" / "sample_rank", managed / "sample_rank")
+            window = self._window(temp_dir)
+            window._refresh_packs()
+            window._managed_pack_combo.setCurrentIndex(0)
+
+            with mock.patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Cancel):
+                window._remove_managed_pack()
+
+            self.assertTrue((managed / "sample_rank").exists())
+
+    def test_confirmed_managed_pack_removal_refreshes_catalog(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            managed = Path(temp_dir) / "managed"
+            shutil.copytree(Path(__file__).parent.parent / "examples" / "packs" / "sample_rank", managed / "sample_rank")
+            window = self._window(temp_dir)
+            window._refresh_packs()
+            window._managed_pack_combo.setCurrentIndex(0)
+
+            with mock.patch.object(QMessageBox, "question", return_value=QMessageBox.StandardButton.Yes):
+                window._remove_managed_pack()
+
+            self.assertFalse((managed / "sample_rank").exists())
+            self.assertEqual(window._managed_pack_combo.count(), 0)
 
     def test_import_pack_cancel_zip_dialog_does_not_open_folder_dialog_or_import(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

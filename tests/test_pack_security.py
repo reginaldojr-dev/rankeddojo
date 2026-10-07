@@ -9,6 +9,7 @@ from pathlib import Path
 
 from rankeddojo.adapters.pack.local_pack_catalog import LocalPackCatalog
 from rankeddojo.adapters.pack.local_pack_importer import LocalPackImporter, PackImportError
+from rankeddojo.adapters.pack.pack_security import PackSecurityError
 from rankeddojo.domain.identifiers import (
     UnsafeValueError,
     parse_relative_path,
@@ -168,6 +169,56 @@ class ImporterSecurityTest(unittest.TestCase):
 
         self.assertEqual([pack.id for pack in catalog.list_packs()], ["good"])
         self.assertIn(str(bad), catalog.load_errors)
+
+
+class ManagedPackRemovalTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp())
+        self.managed = self.root / "managed"
+        self.bundled = self.root / "bundled"
+        self.managed.mkdir()
+        self.bundled.mkdir()
+
+    def tearDown(self) -> None:
+        import shutil
+
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def test_managed_pack_is_removed_without_touching_other_pack_or_history(self) -> None:
+        write_pack(self.managed / "safe_pack")
+        write_pack(self.managed / "other_pack", pack_id="other_pack")
+        write_pack(self.bundled / "embedded", pack_id="embedded")
+        history = self.root / "trainer.sqlite3"
+        history.write_text("history", encoding="utf-8")
+
+        catalog = LocalPackCatalog(self.managed, bundled_packs_dir=self.bundled)
+
+        self.assertEqual(catalog.pack_origin("safe_pack"), "managed")
+        self.assertEqual(catalog.pack_origin("embedded"), "embedded")
+        catalog.remove_managed_pack("safe_pack")
+
+        self.assertFalse((self.managed / "safe_pack").exists())
+        self.assertTrue((self.managed / "other_pack").exists())
+        self.assertTrue((self.bundled / "embedded").exists())
+        self.assertEqual(history.read_text(encoding="utf-8"), "history")
+
+    def test_embedded_and_local_dev_packs_are_not_removable(self) -> None:
+        write_pack(self.bundled / "embedded", pack_id="embedded")
+        catalog = LocalPackCatalog(self.managed, bundled_packs_dir=self.bundled)
+
+        with self.assertRaises(PackSecurityError):
+            catalog.remove_managed_pack("embedded")
+        with self.assertRaises(PackSecurityError):
+            catalog.remove_managed_pack("local_dev")
+
+    def test_path_traversal_is_rejected_before_filesystem_removal(self) -> None:
+        outside = self.root / "outside"
+        outside.mkdir()
+        catalog = LocalPackCatalog(self.managed)
+
+        with self.assertRaises(PackSecurityError):
+            catalog.remove_managed_pack("../outside")
+        self.assertTrue(outside.exists())
 
 
 if __name__ == "__main__":

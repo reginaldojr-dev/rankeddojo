@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from rankeddojo.adapters.exercise_definition.json_loader import (
@@ -7,7 +8,9 @@ from rankeddojo.adapters.exercise_definition.json_loader import (
     JsonExerciseDefinitionLoader,
 )
 from rankeddojo.adapters.pack.json_pack_loader import JsonPackLoader, PackDefinitionError
+from rankeddojo.adapters.pack.pack_security import PackSecurityError, _is_link, ensure_inside, reject_links
 from rankeddojo.application.mvp_models import ExerciseRef
+from rankeddojo.domain.identifiers import UnsafeValueError, validate_identifier
 from rankeddojo.domain.pack_definition import PackDefinition
 
 
@@ -49,6 +52,62 @@ class LocalPackCatalog:
             if pack is not None:
                 packs[pack.id] = pack
         return sorted(packs.values(), key=lambda pack: pack.name.lower())
+
+    def list_managed_packs(self) -> list[PackDefinition]:
+        """Return only packs imported into the application's managed store."""
+        packs: list[PackDefinition] = []
+        if not self._managed_packs_dir.is_dir():
+            return packs
+        for root in sorted(self._managed_packs_dir.iterdir()):
+            if not root.is_dir() or root.is_symlink():
+                continue
+            pack = self._load_pack(root)
+            if pack is not None:
+                packs.append(pack)
+        return sorted(packs, key=lambda pack: pack.name.lower())
+
+    def pack_origin(self, pack_id: str) -> str | None:
+        """Return the current catalog origin: embedded, managed, or unknown."""
+        if any(pack.id == pack_id for pack in self.list_managed_packs()):
+            return "managed"
+        if self._bundled_packs_dir is not None and self._bundled_packs_dir.is_dir():
+            for root in sorted(self._bundled_packs_dir.iterdir()):
+                if not root.is_dir() or root.is_symlink():
+                    continue
+                pack = self._load_pack(root)
+                if pack is not None and pack.id == pack_id:
+                    return "embedded"
+        return None
+
+    def remove_managed_pack(self, pack_id: str) -> PackDefinition:
+        """Remove one validated managed pack without touching its history."""
+        try:
+            validate_identifier(pack_id, "pack_id")
+        except UnsafeValueError as error:
+            raise PackSecurityError(str(error)) from error
+
+        managed_root = self._managed_packs_dir
+        if _is_link(managed_root):
+            raise PackSecurityError("Managed packs directory cannot be a symbolic link.")
+        managed_entry = None
+        for root in sorted(managed_root.iterdir()):
+            if not root.is_dir() or _is_link(root):
+                continue
+            pack = self._load_pack(root)
+            if pack is not None and pack.id == pack_id:
+                managed_entry = (root, pack)
+                break
+        if managed_entry is None:
+            raise PackSecurityError(f"Managed pack not found: {pack_id}.")
+
+        source_root, pack = managed_entry
+        destination = ensure_inside(managed_root, source_root)
+        if _is_link(destination):
+            raise PackSecurityError("Managed pack cannot be a symbolic link.")
+        reject_links(destination)
+        shutil.rmtree(destination)
+        self._load_errors.pop(str(destination), None)
+        return pack
 
     def list_exercises(self, pack_id: str) -> list[ExerciseRef]:
         for root in self._pack_roots():

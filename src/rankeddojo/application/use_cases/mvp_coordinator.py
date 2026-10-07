@@ -165,6 +165,15 @@ class MVPTrainerCoordinator:
     def list_packs(self) -> list[PackDefinition]:
         return self._pack_catalog.list_packs()
 
+    def list_managed_packs(self) -> list[PackDefinition]:
+        return self._pack_catalog.list_managed_packs()
+
+    def pack_origin(self, pack_id: str) -> str | None:
+        return self._pack_catalog.pack_origin(pack_id)
+
+    def remove_managed_pack(self, pack_id: str) -> PackDefinition:
+        return self._pack_catalog.remove_managed_pack(pack_id)
+
     def list_levels(self, pack_id: str) -> tuple[str, ...]:
         packs = {pack.id: pack for pack in self.list_packs()}
         pack = packs.get(pack_id)
