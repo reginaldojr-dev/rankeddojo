@@ -42,6 +42,7 @@ class ThemeTokens:
     warning: str             # pending / in progress / attention
     fail_background: str     # destructive button hover / FAIL banner
     success_background: str  # banner de PASS
+    warning_background: str = "#2a2010"  # compact warning cards / attention panels
 
     # typography and shape
     font_body: str = 'Consolas, "Cascadia Mono", "JetBrains Mono", "DejaVu Sans Mono", "Courier New", monospace'

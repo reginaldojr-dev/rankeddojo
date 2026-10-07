@@ -51,7 +51,7 @@ QLabel[status="muted"] {{ color: {t.text_secondary}; }}
 
 /* ---------- containers ---------- */
 QFrame[role="card"] {{ background: {t.surface_alt}; border: 1px solid {t.border}; border-radius: {r}px; }}
-QFrame[role="card"][status="pending"] {{ border: 1px solid {t.warning}; }}
+QFrame[role="card"][status="pending"] {{ background: {t.warning_background}; border: 1px solid {t.warning}; }}
 QFrame[role="banner"] {{ border-radius: {r}px; }}
 QFrame[role="banner"][status="pass"] {{ background: {t.success_background}; border: 2px solid {t.success}; }}
 QFrame[role="banner"][status="fail"] {{ background: {t.fail_background}; border: 2px solid {t.fail}; }}
