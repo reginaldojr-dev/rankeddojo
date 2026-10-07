@@ -14,12 +14,9 @@ import io
 import lzma
 import os
 import platform
-import shutil
 import subprocess
 import sys
 import tarfile
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -101,8 +98,21 @@ def download_deb(path: Path) -> None:
     cache_dir().mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".part")
     try:
-        with urllib.request.urlopen(DEB_URL, timeout=30) as response, temporary.open("wb") as output:
-            shutil.copyfileobj(response, output)
+        last_error: Exception | None = None
+        commands = (
+            ["curl", "--fail", "--location", "--silent", "--show-error", "--connect-timeout", "30", DEB_URL, "--output", str(temporary)],
+            ["wget", "--quiet", "--output-document", str(temporary), DEB_URL],
+        )
+        for command in commands:
+            try:
+                subprocess.run(command, check=True, capture_output=True, text=True)
+                break
+            except FileNotFoundError as error:
+                last_error = error
+            except subprocess.CalledProcessError as error:
+                last_error = error
+        else:
+            raise RuntimeError("curl ou wget não está disponível para baixar o pacote Ubuntu oficial.") from last_error
         if sha256(temporary) != DEB_SHA256:
             raise RuntimeError("SHA-256 do pacote Ubuntu não corresponde ao valor fixado.")
         os.replace(temporary, path)
@@ -167,7 +177,7 @@ def prepare_dependency() -> bool:
         print("Preparando libxcb-cursor.so.0 no cache local...")
         try:
             download_deb(cached)
-        except (OSError, RuntimeError, urllib.error.URLError) as error:
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
             print(f"Não foi possível obter o pacote Ubuntu oficial: {error}")
             return False
     try:

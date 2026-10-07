@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
-
 from rankeddojo.adapters.theme.user_theme_loader import UserThemeLoader
+from rankeddojo.adapters.ui.qt.application import create_application
 from rankeddojo.adapters.ui.qt.components.combo_wheel_guard import install_combo_box_wheel_guard
 from rankeddojo.adapters.ui.qt.main_window import MainWindow
 from rankeddojo.adapters.ui.qt.startup_window import StartupWindow
@@ -20,7 +18,7 @@ from rankeddojo.infrastructure.paths import user_themes_dir
 class DesktopApp:
     def __init__(self) -> None:
         self._data_dir_migration = migrate_legacy_data_dir()
-        self._qt_app = QApplication(sys.argv)
+        self._qt_app = create_application()
         self._combo_wheel_guard = install_combo_box_wheel_guard(self._qt_app)
         factory = AppFactory()
         self._config_repository = factory.create_config_repository()

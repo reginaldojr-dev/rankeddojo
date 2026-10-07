@@ -5,6 +5,12 @@ from collections.abc import Iterable
 from rankeddojo.ports.runtime_port import LanguageRuntime, RuntimeDescriptor, RuntimeStatus
 from rankeddojo.domain.exercise_definition import PROGRAM_OUTPUT
 
+AUTOMATIC_LANGUAGE = "automatic"
+
+
+def is_automatic_language(value: str) -> bool:
+    return value == AUTOMATIC_LANGUAGE
+
 
 class UnsupportedLanguageError(ValueError):
     pass

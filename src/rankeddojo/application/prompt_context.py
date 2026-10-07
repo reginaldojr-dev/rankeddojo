@@ -5,6 +5,7 @@ import re
 import unicodedata
 
 from rankeddojo.application.study_intent import StudyIntent
+from rankeddojo.application.engine.runtime_registry import is_automatic_language
 
 
 def _terms(value: str) -> set[str]:
@@ -25,7 +26,7 @@ class PromptContextProfile:
         terms = _terms(intent.topic)
         language = intent.programming_language.casefold()
         if self.programming_languages:
-            if language == "automatic":
+            if is_automatic_language(language):
                 if not self.programming_languages.intersection(terms):
                     return False
             elif language not in self.programming_languages:

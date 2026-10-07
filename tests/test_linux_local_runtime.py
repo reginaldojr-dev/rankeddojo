@@ -108,6 +108,14 @@ class LinuxLocalRuntimeTest(unittest.TestCase):
         self.assertIn("rankeddojo.infrastructure.linux_runtime", source)
         self.assertNotIn("urllib.request", source)
 
+    def test_runtime_bootstrap_does_not_import_http_client(self) -> None:
+        source = (ROOT / "src" / "rankeddojo" / "infrastructure" / "linux_runtime.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("urllib.request", source)
+        self.assertIn('"curl"', source)
+        self.assertIn('"wget"', source)
+
 
 if __name__ == "__main__":
     unittest.main()

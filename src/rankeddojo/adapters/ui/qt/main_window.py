@@ -523,12 +523,16 @@ class MainWindow(QMainWindow):
         self._home_pack_empty_description.setAlignment(Qt.AlignmentFlag.AlignCenter)
         empty_layout.addWidget(self._home_pack_empty_title, 0, Qt.AlignmentFlag.AlignCenter)
         empty_layout.addWidget(self._home_pack_empty_description)
-        empty_actions = QHBoxLayout()
+        empty_actions_widget = QWidget()
+        empty_actions = QHBoxLayout(empty_actions_widget)
+        empty_actions.setContentsMargins(0, 0, 0, 0)
+        empty_actions.setSpacing(10)
+        self._home_pack_empty_actions = empty_actions_widget
         self._home_generate_pack_button = self._button("", self._open_study_flow, "dojo-secondary")
         self._home_import_pack_button = self._button("", self._import_pack, "dojo-secondary")
         empty_actions.addWidget(self._home_generate_pack_button)
         empty_actions.addWidget(self._home_import_pack_button)
-        empty_layout.addLayout(self._centered(empty_actions))
+        empty_layout.addLayout(self._centered(empty_actions_widget))
         ready_layout.addWidget(self._home_pack_empty_state)
 
         ready_layout.addStretch(3)
