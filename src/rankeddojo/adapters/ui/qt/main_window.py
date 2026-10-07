@@ -238,7 +238,8 @@ class MainWindow(QMainWindow):
         self._set_button(self._home_history_button, self._t("Histórico").upper())
         self._set_button(self._home_settings_button, self._t("Configurações").upper())
         self._home_pack_empty_title.setText(self._t("Ainda não há packs de estudo.").upper())
-        self._home_pack_empty_description.setText(self._t("Os packs disponíveis agora são exemplos para testar o RankedDojo. Gere ou importe um pack para começar a estudar."))
+        self._home_pack_empty_description.setText(self._t("Apenas packs de exemplo estão disponíveis."))
+        self._home_pack_empty_description_2.setText(self._t("Gere ou importe um pack para começar."))
         self._set_button(self._home_generate_pack_button, self._action("Gerar pack"))
         self._set_button(self._home_import_pack_button, self._action("Importar Pack"))
         self._last_session_header.setText(self._t("Última sessão").upper())
@@ -525,22 +526,50 @@ class MainWindow(QMainWindow):
         self._home_pack_empty_state = QWidget()
         empty_layout = QVBoxLayout(self._home_pack_empty_state)
         empty_layout.setContentsMargins(0, 4, 0, 4)
-        empty_layout.setSpacing(6)
+        empty_layout.setSpacing(0)
+        empty_row = QWidget()
+        empty_row_layout = QHBoxLayout(empty_row)
+        empty_row_layout.setContentsMargins(0, 0, 0, 0)
+        empty_row_layout.setSpacing(12)
+        self._home_pack_empty_warning_icon = ui.label("!", status="pending")
+        self._home_pack_empty_warning_icon.setFixedSize(24, 24)
+        self._home_pack_empty_warning_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_row_layout.addWidget(
+            self._home_pack_empty_warning_icon,
+            0,
+            Qt.AlignmentFlag.AlignVCenter,
+        )
+
+        empty_text = QWidget()
+        empty_text_layout = QVBoxLayout(empty_text)
+        empty_text_layout.setContentsMargins(0, 0, 0, 0)
+        empty_text_layout.setSpacing(1)
         self._home_pack_empty_title = ui.label("", role="question")
-        self._home_pack_empty_description = ui.label("", role="muted", wrap=True)
-        self._home_pack_empty_description.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        empty_layout.addWidget(self._home_pack_empty_title, 0, Qt.AlignmentFlag.AlignCenter)
-        empty_layout.addWidget(self._home_pack_empty_description)
+        self._home_pack_empty_description = ui.label("", role="muted")
+        self._home_pack_empty_description_2 = ui.label("", role="muted")
+        for label in (
+            self._home_pack_empty_title,
+            self._home_pack_empty_description,
+            self._home_pack_empty_description_2,
+        ):
+            label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            empty_text_layout.addWidget(label)
+        empty_row_layout.addWidget(empty_text, 1, Qt.AlignmentFlag.AlignVCenter)
+
+        empty_row_layout.addStretch(1)
         empty_actions_widget = QWidget()
-        empty_actions = QHBoxLayout(empty_actions_widget)
+        empty_actions = QVBoxLayout(empty_actions_widget)
         empty_actions.setContentsMargins(0, 0, 0, 0)
-        empty_actions.setSpacing(10)
+        empty_actions.setSpacing(4)
         self._home_pack_empty_actions = empty_actions_widget
         self._home_generate_pack_button = self._button("", self._open_study_flow, "dojo-secondary")
         self._home_import_pack_button = self._button("", self._import_pack, "dojo-secondary")
+        for button in (self._home_generate_pack_button, self._home_import_pack_button):
+            button.setFixedSize(150, 38)
         empty_actions.addWidget(self._home_generate_pack_button)
         empty_actions.addWidget(self._home_import_pack_button)
-        empty_layout.addLayout(self._centered(empty_actions_widget))
+        empty_row_layout.addWidget(empty_actions_widget, 0, Qt.AlignmentFlag.AlignVCenter)
+        empty_layout.addWidget(empty_row)
         ready_layout.addWidget(self._home_pack_empty_state)
 
         ready_layout.addStretch(3)

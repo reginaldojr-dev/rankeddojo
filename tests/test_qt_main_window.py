@@ -10,7 +10,7 @@ from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from rankeddojo.adapters.editor.editor_registry import EDITOR_REGISTRY
 from rankeddojo.adapters.editor.subprocess_editor import SubprocessEditor, SubprocessEditorFactory
@@ -340,7 +340,8 @@ class MainWindowTest(unittest.TestCase):
 
             self.assertFalse(window._home_pack_empty_state.isHidden())
             self.assertIsInstance(window._home_pack_empty_actions, QWidget)
-            self.assertIsNotNone(window._home_pack_empty_actions.layout())
+            self.assertIsInstance(window._home_pack_empty_actions.layout(), QVBoxLayout)
+            self.assertEqual(window._home_generate_pack_button.size(), window._home_import_pack_button.size())
             with mock.patch.object(window._coordinator, "list_managed_packs", return_value=[object()]):
                 window._refresh_home_status()
             self.assertTrue(window._home_pack_empty_state.isHidden())
