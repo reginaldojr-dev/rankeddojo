@@ -50,6 +50,33 @@ class LocalPackCatalog:
                 packs[pack.id] = pack
         return sorted(packs.values(), key=lambda pack: pack.name.lower())
 
+    def list_managed_packs(self) -> list[PackDefinition]:
+        """Return packs imported into the app-managed store only."""
+        if not self._managed_packs_dir.is_dir():
+            return []
+        packs: list[PackDefinition] = []
+        for root in sorted(self._managed_packs_dir.iterdir()):
+            if not root.is_dir() or root.is_symlink():
+                continue
+            pack = self._load_pack(root)
+            if pack is not None:
+                packs.append(pack)
+        return sorted(packs, key=lambda pack: pack.name.lower())
+
+    def pack_origin(self, pack_id: str) -> str | None:
+        """Return the catalog origin without identifying packs by display name."""
+        if any(pack.id == pack_id for pack in self.list_managed_packs()):
+            return "managed"
+        if self._bundled_packs_dir is None or not self._bundled_packs_dir.is_dir():
+            return None
+        for root in sorted(self._bundled_packs_dir.iterdir()):
+            if not root.is_dir() or root.is_symlink():
+                continue
+            pack = self._load_pack(root)
+            if pack is not None and pack.id == pack_id:
+                return "embedded"
+        return None
+
     def list_exercises(self, pack_id: str) -> list[ExerciseRef]:
         for root in self._pack_roots():
             pack = self._load_pack(root)

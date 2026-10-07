@@ -269,3 +269,14 @@ the available checks and runs them against isolated copies; packs cannot ship
 grader scripts or arbitrary commands. The development pack
 `_local/packs/call-me-maybe-guided` demonstrates the progressive contract and
 remains local-only.
+
+### Pós-V1 — Pack generation workflow
+
+- O `StudyIntent` agora separa progressão (`Progressive`/`Uniform`), quantidade de
+  levels e exercícios por level, com modo `Automatic` e prioridade para escolhas explícitas.
+- O `PackPromptBuilder` recomenda o contrato v3 real, validação declarativa e a regra de
+  que packs distribuídos não contêm soluções completas.
+- `PromptContextRegistry` é uma camada opcional de guidance. O primeiro profile é
+  `42-c-exam`, ativado apenas pela combinação de sinais 42 + exame/prova + C.
+- A Home mostra um empty state quando não há packs gerenciados/importados; packs
+  embutidos de demonstração continuam visíveis e não são identificados por nome.

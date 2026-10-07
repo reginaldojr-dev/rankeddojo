@@ -5,10 +5,15 @@ Fonte única do contrato suportado por esta versão do app.
 Packs são declarativos: eles descrevem atividades, arquivos, validação e metadados.
 Eles não podem declarar comandos de shell, scripts arbitrários, plugins ou graders próprios.
 
+Packs distribuídos não devem conter soluções completas dos exercícios. O pack contém
+subjects e dados de validação para a implementação do aluno. Soluções corretas podem
+existir apenas em testes internos do RankedDojo ou fixtures de desenvolvimento que
+não sejam distribuídos como conteúdo de pack.
+
 ## Segurança
 
-Harnesses e soluções de referência são compilados/executados durante a correção, com as
-permissões do usuário local. A importação nunca executa código.
+Harnesses e arquivos de suporte executáveis são compilados/executados durante a
+correção, com as permissões do usuário local. A importação nunca executa código.
 
 O app valida ids, paths relativos, ZIPs, symlinks/junctions e arquivos declarados antes
 de copiar o pack. Não há sandbox completa; importe apenas conteúdo confiável.
@@ -33,10 +38,13 @@ my-pack/
 └── level0/
     └── activity_id/
         ├── exercise.json
-        ├── subject.md
-        └── solution/              # opcional: apenas quando a validação exigir referência
-            └── reference.ext
+        └── subject.md
 ```
+
+O schema usa o layout de level/activity acima. Semanticamente, `subject.md` é o
+enunciado apresentado ao aluno; fixtures declarativas, valores esperados e dados
+de validação suportados ficam no `exercise.json` ou em arquivos de suporte declarados.
+Não existe diretório `solutions/` na estrutura recomendada para distribuição.
 
 ## pack.json
 
@@ -182,15 +190,16 @@ um validator futuro declare suporte explícito para verificá-las.
 
 ```json
 {
-  "source": "solution/main.cpp",
+  "source": "internal/reference/main.cpp",
   "harness": "harness/main.cpp",
-  "extra_files": ["solution/helper.cpp"]
+  "extra_files": ["internal/reference/helper.cpp"]
 }
 ```
 
-`reference` não é obrigatória no nível genérico da activity. Ela deve existir apenas
-quando algum passo de validação precisar executar ou comparar contra uma referência.
-Na versão atual, `reference_output` exige `reference`; `literal` não exige.
+`reference` não é obrigatória no nível genérico da activity. A compatibilidade com
+`reference_output` permanece para fixtures internas, packs legados e casos de
+desenvolvimento que realmente precisem dela; não é o caminho recomendado para
+packs distribuídos novos. `literal` não exige uma implementação de referência.
 
 `extra_files` permite referências multi-file em C++, Java e linguagens futuras.
 
@@ -212,7 +221,9 @@ Expectations atuais:
 - `sum_integers`.
 
 Para packs novos, prefira `literal` quando bons casos determinísticos forem suficientes.
-Use `reference_output` somente quando a saída esperada depender de uma referência real.
+Use `reference_output` somente em conteúdo interno/legado quando a saída esperada
+depender tecnicamente de uma referência real. Não inclua uma solução completa no
+pack distribuído para satisfazer essa opção.
 Expectations embutidas são mantidas para regressão e exemplos simples.
 
 #### tests.contract

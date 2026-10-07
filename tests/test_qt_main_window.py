@@ -319,6 +319,24 @@ class MainWindowTest(unittest.TestCase):
             self.assertIs(window._stack.currentWidget(), window._study_page)
             self.assertTrue(window._study_page.isAncestorOf(window._study_topic))
 
+    def test_study_generator_exposes_progression_and_scale_controls(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window = self._window(temp_dir)
+            window._open_study_flow()
+
+            self.assertEqual(window._study_progression_combo.currentData(), "progressive")
+            self.assertEqual(window._study_levels_combo.currentData(), "automatic")
+            self.assertEqual(window._study_exercises_per_level_combo.currentData(), "automatic")
+
+    def test_home_shows_pack_empty_state_only_without_managed_content(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            window = self._window(temp_dir)
+
+            self.assertFalse(window._home_pack_empty_state.isHidden())
+            with mock.patch.object(window._coordinator, "list_managed_packs", return_value=[object()]):
+                window._refresh_home_status()
+            self.assertTrue(window._home_pack_empty_state.isHidden())
+
     def test_home_generates_and_copies_vendor_neutral_pack_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             window = self._window(temp_dir)

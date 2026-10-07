@@ -237,6 +237,10 @@ class MainWindow(QMainWindow):
         self._set_button(self._home_study_button, self._t("Quero estudar algo novo").upper())
         self._set_button(self._home_history_button, self._t("Histórico").upper())
         self._set_button(self._home_settings_button, self._t("Configurações").upper())
+        self._home_pack_empty_title.setText(self._t("Ainda não há packs de estudo.").upper())
+        self._home_pack_empty_description.setText(self._t("Os packs disponíveis agora são exemplos para testar o RankedDojo. Gere ou importe um pack para começar a estudar."))
+        self._set_button(self._home_generate_pack_button, self._action("Gerar pack"))
+        self._set_button(self._home_import_pack_button, self._action("Importar Pack"))
         self._last_session_header.setText(self._t("Última sessão").upper())
         self._set_button(self._last_session_continue_button, self._t("Continuar").upper())
         self._refresh_home_last_session()
@@ -247,7 +251,9 @@ class MainWindow(QMainWindow):
         self._study_section_label.setText(f"> {self._t('O que você quer estudar?').upper()}")
         for label, text in self._study_field_labels:
             label.setText(self._t(text))
-        self._reset_combo_items(self._study_level_combo, ("Básico", "Intermediário", "Avançado"))
+        self._reset_combo_items(self._study_progression_combo, ("Progressive", "Uniform"), ("progressive", "uniform"))
+        self._reset_combo_items(self._study_levels_combo, ("Automatic", "1", "2", "3", "4", "5", "6"))
+        self._reset_combo_items(self._study_exercises_per_level_combo, ("Automatic", "2", "3", "4", "5"))
         self._reset_combo_items(self._study_goal_combo, ("Aprender", "Praticar", "Revisar", "Validar conhecimento"))
         self._reset_combo_items(self._study_format_combo, ("Exercícios", "Projeto", "Misto", "Revisão", "Simulado"))
         self._reset_combo_items(self._study_content_language_combo, ("Português (pt-BR)", "Inglês (en)"), ("pt-BR", "en"))
@@ -508,6 +514,23 @@ class MainWindow(QMainWindow):
         self._home_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ready_layout.addLayout(self._centered(self._home_status))
 
+        self._home_pack_empty_state = QWidget()
+        empty_layout = QVBoxLayout(self._home_pack_empty_state)
+        empty_layout.setContentsMargins(0, 4, 0, 4)
+        empty_layout.setSpacing(6)
+        self._home_pack_empty_title = ui.label("", role="question")
+        self._home_pack_empty_description = ui.label("", role="muted", wrap=True)
+        self._home_pack_empty_description.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_layout.addWidget(self._home_pack_empty_title, 0, Qt.AlignmentFlag.AlignCenter)
+        empty_layout.addWidget(self._home_pack_empty_description)
+        empty_actions = QHBoxLayout()
+        self._home_generate_pack_button = self._button("", self._open_study_flow, "dojo-secondary")
+        self._home_import_pack_button = self._button("", self._import_pack, "dojo-secondary")
+        empty_actions.addWidget(self._home_generate_pack_button)
+        empty_actions.addWidget(self._home_import_pack_button)
+        empty_layout.addLayout(self._centered(empty_actions))
+        ready_layout.addWidget(self._home_pack_empty_state)
+
         ready_layout.addStretch(3)
         layout.addWidget(ready_area, 1)
 
@@ -630,7 +653,9 @@ class MainWindow(QMainWindow):
         fields = QGridLayout()
         fields.setHorizontalSpacing(10)
         fields.setVerticalSpacing(8)
-        self._study_level_combo = self._combo(("Básico", "Intermediário", "Avançado"))
+        self._study_progression_combo = self._combo(("Progressive", "Uniform"))
+        self._study_levels_combo = self._combo(("Automatic", "1", "2", "3", "4", "5", "6"))
+        self._study_exercises_per_level_combo = self._combo(("Automatic", "2", "3", "4", "5"))
         self._study_goal_combo = self._combo(("Aprender", "Praticar", "Revisar", "Validar conhecimento"))
         self._study_format_combo = self._combo(("Exercícios", "Projeto", "Misto", "Revisão", "Simulado"))
         self._study_language_combo = QComboBox()
@@ -641,7 +666,9 @@ class MainWindow(QMainWindow):
         self._study_field_labels: list[tuple[QLabel, str]] = []
         for index, (caption, widget) in enumerate(
             (
-                ("Nível", self._study_level_combo),
+                ("Progressão", self._study_progression_combo),
+                ("Levels", self._study_levels_combo),
+                ("Exercícios por level", self._study_exercises_per_level_combo),
                 ("Objetivo", self._study_goal_combo),
                 ("Formato", self._study_format_combo),
                 ("Linguagem", self._study_language_combo),
@@ -1391,6 +1418,8 @@ class MainWindow(QMainWindow):
             mark = "\u2713" if available else "!"
             chip = ui.label(f"{status.display_name} {mark}", status="pass" if available else "pending")
             self._home_language_status.addWidget(chip)
+        managed_loader = getattr(self._coordinator, "list_managed_packs", None)
+        self._home_pack_empty_state.setVisible(callable(managed_loader) and not managed_loader())
 
     def _refresh_home_last_session(self) -> None:
         """Populates the LAST SESSION block from `coordinator.last_session_summary()`
@@ -1434,7 +1463,7 @@ class MainWindow(QMainWindow):
         for status in self._coordinator.runtime_statuses():
             label = f"{status.display_name} ({status.language})"
             if not status.available and not status.tool:
-                label += f" · {self._t('não verificado')}"
+                label += f" · {self._t('runtime não verificado')}"
             self._study_language_combo.addItem(label, status.language)
         if current is not None:
             index = self._study_language_combo.findData(current)
@@ -1445,12 +1474,14 @@ class MainWindow(QMainWindow):
     def _study_intent(self) -> StudyIntent:
         return StudyIntent(
             topic=self._study_topic.toPlainText(),
-            level=str(self._study_level_combo.currentData() or self._study_level_combo.currentText()),
             goal=str(self._study_goal_combo.currentData() or self._study_goal_combo.currentText()),
             format=str(self._study_format_combo.currentData() or self._study_format_combo.currentText()),
             programming_language=str(self._study_language_combo.currentData() or "automatic"),
             content_language=str(self._study_content_language_combo.currentData() or "pt-BR"),
             size=str(self._study_size_combo.currentData() or self._study_size_combo.currentText()),
+            progression=str(self._study_progression_combo.currentData() or "progressive"),
+            levels=str(self._study_levels_combo.currentData() or "automatic"),
+            exercises_per_level=str(self._study_exercises_per_level_combo.currentData() or "automatic"),
         )
 
     def _generate_study_prompt(self) -> None:

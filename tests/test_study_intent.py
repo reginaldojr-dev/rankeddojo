@@ -24,12 +24,14 @@ class PackPromptBuilderTest(unittest.TestCase):
         ).build(
             StudyIntent(
                 topic="listas e dicionarios",
-                level="Básico",
                 goal="Praticar",
                 format="Exercícios",
                 programming_language="python",
                 content_language="pt-BR",
                 size="Médio",
+                progression="progressive",
+                levels="4",
+                exercises_per_level="automatic",
             )
         )
 
@@ -39,6 +41,11 @@ class PackPromptBuilderTest(unittest.TestCase):
         self.assertIn("schema_version: 3", prompt)
         self.assertIn("program_output", prompt)
         self.assertIn("reference_output", prompt)
+        self.assertIn("PROGRESSION", prompt)
+        self.assertIn("NUMBER OF LEVELS", prompt)
+        self.assertIn("exactly 4 levels", prompt)
+        self.assertIn("NO SOLUTIONS RULE", prompt)
+        self.assertIn("Do not include complete exercise solutions", prompt)
         self.assertIn("Python [python]: disponivel", prompt)
         for vendor in ("OpenAI", "Claude", "Codex"):
             self.assertNotIn(vendor, prompt)
@@ -51,12 +58,14 @@ class PackPromptBuilderTest(unittest.TestCase):
         ).build(
             StudyIntent(
                 topic=" ",
-                level="Intermediário",
                 goal="Revisar",
                 format="Misto",
                 programming_language="automatic",
                 content_language="en",
                 size="Curto",
+                progression="uniform",
+                levels="automatic",
+                exercises_per_level="2",
             )
         )
 

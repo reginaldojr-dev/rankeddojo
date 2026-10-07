@@ -17,6 +17,7 @@ from rankeddojo.application.mvp_models import (
     ProgressEntry,
 )
 from rankeddojo.application.study_intent import PackPromptBuilder, StudyIntent
+from rankeddojo.application.prompt_context import PromptContextRegistry
 from rankeddojo.application.engine.content_registry import ContentRegistry
 from rankeddojo.application.engine.trace_summary import TraceSummary, build_trace_summary
 from rankeddojo.application.use_cases.get_learning_track import GetLearningTrack, LearningTrackView
@@ -142,6 +143,7 @@ class MVPTrainerCoordinator:
         # track()), so every existing caller/test that builds a coordinator
         # without passing one keeps working unchanged.
         self._content_registry = content_registry or ContentRegistry()
+        self._prompt_context_registry = PromptContextRegistry.default()
         self._get_learning_track = GetLearningTrack(self._content_registry, progress_repository)
         self._get_next_learning_activity = GetNextLearningActivity(self._get_learning_track)
         self.adopt_legacy_progress()
@@ -164,6 +166,12 @@ class MVPTrainerCoordinator:
 
     def list_packs(self) -> list[PackDefinition]:
         return self._pack_catalog.list_packs()
+
+    def list_managed_packs(self) -> list[PackDefinition]:
+        return self._pack_catalog.list_managed_packs()
+
+    def pack_origin(self, pack_id: str) -> str | None:
+        return self._pack_catalog.pack_origin(pack_id)
 
     def list_levels(self, pack_id: str) -> tuple[str, ...]:
         packs = {pack.id: pack for pack in self.list_packs()}
@@ -306,6 +314,7 @@ class MVPTrainerCoordinator:
             capabilities=self.exercise_capabilities(),
             runtime_statuses=self.runtime_statuses(probe=False),
             pack_contract=pack_contract,
+            context_registry=self._prompt_context_registry,
         )
         return builder.build(intent)
 
