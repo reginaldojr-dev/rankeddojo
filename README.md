@@ -159,7 +159,6 @@ Packs de exemplo públicos ficam em [`examples/packs`](examples/packs):
 - `python-basics`
 - `java-basics`
 - `sample_rank`
-- `rank02-practice`, quando presente no checkout
 
 Packs privados/originais ficam em `_local/packs/` e são ignorados pelo Git.
 
